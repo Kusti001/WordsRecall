@@ -13,5 +13,6 @@ client = genai.Client()
 response = client.models.generate_content(
     model="gemini-3-flash-preview", contents="КАК У ТЕБЯ ДЕЛА ТУПОЙ УШЛËПОК?"
 )
+print("start")
 print(response.text)
 print("NPTHING")
