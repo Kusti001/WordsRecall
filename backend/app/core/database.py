@@ -23,6 +23,7 @@ class Word(Model):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     word: Mapped[str] = mapped_column(unique=True)
+    level: Mapped[str | None]
     meaning: Mapped[str | None]
     example: Mapped[str | None]
     translation: Mapped[str]

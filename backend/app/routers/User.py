@@ -5,14 +5,13 @@ from ..repositories.WordRepository import WordRepository
 from ..repositories.UserWordRepository import UserWordRepository
 from ..repositories.ReviewRepository import ReviewRepository
 
+from ..schemas.User import UserCreate
+from ..schemas.UserWord import AddWordRequest
+
 router = APIRouter(prefix="/users")
 
 # ============ SCHEMAS ============
-class UserCreate(BaseModel):
-    telegram_id: str
 
-class AddWordRequest(BaseModel):
-    text: str  # слово на русском или английском
 
 class ReviewSubmit(BaseModel):
     result: bool  # true = правильно, false = неправильно
@@ -70,6 +69,7 @@ async def add_word_to_user(telegram_id: str, body: AddWordRequest):
         "message": "word_added",
         "user_word_id": user_word.id,
         "word": word.word,             # ← английское слово
+        "level": word.level,           # ← уровень сложности
         "translation": word.translation,  # ← русский перевод
         "meaning": word.meaning,       # ← определение
         "example": word.example        # ← пример

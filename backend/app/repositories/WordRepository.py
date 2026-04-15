@@ -1,7 +1,6 @@
 from app.core.database import Word, new_session
 from .base import BaseRepository
 from sqlalchemy import select
-from ..services.gpt import generate_word_data
 
 class WordRepository(BaseRepository[Word]):
     model = Word
@@ -26,21 +25,27 @@ class WordRepository(BaseRepository[Word]):
         
         if not word:
             # Генерируем данные через GPT
-            word_data = await generate_word_data(word_text)  # async!
-            word = await cls.create(
-                word=word_text,
-                translation=word_data["translation"],
-                meaning=word_data.get("meaning"),
-                example=word_data.get("example")
-            )
+            pass
         
         return word
-
+    
     @classmethod
-    async def bulk_create(cls, words_list: list[dict]):
-        """Пакетная загрузка слов"""
-        async with new_session() as session:
-            for word_data in words_list:
-                word = Word(**word_data)
-                session.add(word)
-            await session.commit()
+    async def create_word(cls, word_data):
+        """Добавить новое слово в базу данных"""
+        from sqlalchemy.exc import IntegrityError
+        
+        try:
+            word = await cls.create(
+                word=word_data.word,
+                level=word_data.level,
+                meaning=word_data.meaning,
+                example=word_data.example,
+                translation=word_data.translation
+            )
+            return word.id
+        except IntegrityError:
+            # Слово уже существует - возвращаем его ID
+            existing = await cls.get_by_word(word_data.word)
+            if existing:
+                return existing.id
+            raise

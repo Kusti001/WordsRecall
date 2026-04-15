@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from .routers.word import router as word_router
-from .routers.users import router as users_router
+from .routers.Word import router as word_router
+from .routers.User import router as users_router
 from .core.database import create_tables, delete_tables
 
 @asynccontextmanager
