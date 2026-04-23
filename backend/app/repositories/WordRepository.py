@@ -1,6 +1,7 @@
 from app.core.database import Word, new_session
 from .base import BaseRepository
 from sqlalchemy import select
+from ..services.word_enrichment import enrich_word_text
 
 class WordRepository(BaseRepository[Word]):
     model = Word
@@ -20,12 +21,18 @@ class WordRepository(BaseRepository[Word]):
 
     @classmethod
     async def get_or_create(cls, word_text: str):
-        """Получить слово, если не существует — создать через GPT"""
+        """Получить слово, если не существует — создать через локальную модель Ollama."""
         word = await cls.get_by_word(word_text)
         
         if not word:
-            # Генерируем данные через GPT
-            pass
+            enriched = await enrich_word_text(word_text)
+            word = await cls.create(
+                word=enriched.word,
+                level=enriched.level,
+                meaning=enriched.meaning,
+                example=enriched.example,
+                translation=enriched.translation,
+            )
         
         return word
     

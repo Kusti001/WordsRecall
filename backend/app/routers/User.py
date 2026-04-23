@@ -25,10 +25,10 @@ async def create_user(body: UserCreate):
     user = await UserRepository.get_by_telegram_id(body.telegram_id)
     
     if user:
-        return {"user_id": user.id, "message": "user_already_exists"}
+        return {"message": "user_already_exists"}
     
     user = await UserRepository.create_user(body.telegram_id)
-    return {"user_id": user.id, "telegram_id": user.telegram_id}
+    return {"message": "user_created"}
 
 
 @router.get("/{telegram_id}")
@@ -131,6 +131,7 @@ async def get_review_words(telegram_id: str):
                 "user_word_id": uw.id,
                 "word": uw.word.word,           # показываем английское слово
                 "translation": uw.word.translation,
+                "meaning": uw.word.meaning,
                 "example": uw.word.example,
                 "interval": uw.interval,
                 "repetitions": uw.repetitions,
