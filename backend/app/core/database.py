@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
-from datetime import datetime
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
+from datetime import datetime, timezone
 from sqlalchemy import func, ForeignKey
+from .config import settings
 
-engine = create_async_engine("sqlite+aiosqlite:///words.db")
+engine = create_async_engine(settings.DATABASE_URL, echo=False)
 
 new_session = async_sessionmaker(engine, expire_on_commit=False)
 
@@ -17,6 +18,8 @@ class User(Model):
     telegram_id: Mapped[str] = mapped_column(unique=True)
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    
+    user_words: Mapped[list["UserWord"]] = relationship(back_populates="user")
 
 class Word(Model):
     __tablename__ = "words"
@@ -30,6 +33,8 @@ class Word(Model):
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
+    user_words: Mapped[list["UserWord"]] = relationship(back_populates="word")
+
 class UserWord(Model):
     __tablename__ = "user_words"
 
@@ -39,9 +44,13 @@ class UserWord(Model):
     
     interval: Mapped[int] = mapped_column(default=1) # Интервал между повторениями в днях
     repetitions: Mapped[int] = mapped_column(default=0) # Правильные ответы подряд
-    next_review: Mapped[datetime] = mapped_column(default=func.now()) # Дата следующего повторения, по умолчанию - сейчас
+    next_review: Mapped[datetime] = mapped_column(default=lambda: datetime.now(timezone.utc))
 
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="user_words")
+    word: Mapped["Word"] = relationship(back_populates="user_words")
+    reviews: Mapped[list["Review"]] = relationship(back_populates="user_word")
 
 class Review(Model):
     __tablename__ = "reviews"
@@ -51,6 +60,7 @@ class Review(Model):
     result: Mapped[str]
     reviewed_at: Mapped[datetime] = mapped_column(server_default=func.now())
 
+    user_word: Mapped["UserWord"] = relationship(back_populates="reviews")
 
 async def create_tables():
     async with engine.begin() as conn:

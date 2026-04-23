@@ -1,6 +1,5 @@
 from fastapi import APIRouter
-from ..schemas.Word import WordAdd
-from ..repositories.WordRepository import WordRepository
+from app.repositories.WordRepository import WordRepository
 
 
 router = APIRouter(

@@ -7,7 +7,7 @@ class UserRepository(BaseRepository[User]):
 
     @classmethod
     async def get_by_telegram_id(cls, telegram_id: str):
-        """Получить пользователя по Telegram ID"""
+        """Get a user by Telegram ID"""
         async with new_session() as session:
             query = select(User).where(User.telegram_id == telegram_id)
             result = await session.execute(query)
@@ -15,5 +15,5 @@ class UserRepository(BaseRepository[User]):
 
     @classmethod
     async def create_user(cls, telegram_id: str):
-        """Создать нового пользователя"""
+        """Create a new user"""
         return await cls.create(telegram_id=telegram_id)

@@ -20,11 +20,21 @@ async def get_word(word:str):
         async with session.get(f"{BASE_URL}/words/{word}") as r:
             return await r.json()
 
-
-async def add_word(telegram_id: str, text: str):
+async def add_word(telegram_id: str, word_id: str):
     async with aiohttp.ClientSession() as session:
-        async with session.post(f"{BASE_URL}/users/{telegram_id}/words", json={"text": text}) as r:
+        async with session.post(f"{BASE_URL}/users/{telegram_id}/words", json={"id": word_id}) as r:
             return await r.json()
+
+
+async def send_review(telegram_id: str, user_word_id: str, result: str):
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"{BASE_URL}/users/{telegram_id}/words/{user_word_id}/review", json={"result": result}) as r:
+            return await r.json()
+
+
+
+
+
 
 def is_valid_word(text: str) -> bool:
     text = text.strip()

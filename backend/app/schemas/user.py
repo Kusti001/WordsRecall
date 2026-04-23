@@ -4,4 +4,4 @@ class UserCreate(BaseModel):
     telegram_id: str
 
 class AddWordRequest(BaseModel):
-    text: str  # "apple"
+    text: str

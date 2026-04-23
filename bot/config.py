@@ -1,10 +1,8 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite+aiosqlite:///./words.db"
-    DEFAULT_OLLAMA_MODEL: str = ""
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-
+    BOT_TOKEN: str = ""
+    ADMIN_ID: str = ""
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()

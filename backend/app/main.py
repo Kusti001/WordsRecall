@@ -1,8 +1,7 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
-from .routers.Word import router as word_router
-from .routers.User import router as users_router
 from .core.database import create_tables, delete_tables
+from .api.v1.router import api_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -13,9 +12,9 @@ async def lifespan(app: FastAPI):
     # Shutdown: Delete tables
     #await delete_tables()
 
-app = FastAPI(lifespan=lifespan) # создаем экземпляр приложения FastAPI, который будет обрабатывать запросы и маршруты
+# Create FastAPI application with lifespan context manager for startup and shutdown events
+app = FastAPI(lifespan=lifespan)
 
-app.include_router(word_router)
-app.include_router(users_router)
+# Include API routers for words and users
+app.include_router(api_router)
 
-# включаем маршруты из router в приложение FastAPI, чтобы они были доступны при обработке запросов

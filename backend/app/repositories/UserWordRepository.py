@@ -1,60 +1,52 @@
-from app.core.database import UserWord, User, Word, new_session
+from app.core.database import UserWord, Word, new_session
 from .base import BaseRepository
 from sqlalchemy import select, and_
+from sqlalchemy.orm import selectinload
 from datetime import datetime, timedelta
-#from ..services.spaced_repetition import calculate_next_review
 
 class UserWordRepository(BaseRepository[UserWord]):
     model = UserWord
 
     @classmethod
     async def add_word_to_user(cls, user_id: int, word_id: int):
-        """Добавить слово в список пользователя"""
+        """Add a word to the user's list of words"""
         async with new_session() as session:
-            # Проверяем, не добавлено ли уже
-            query = select(UserWord).where(
-                and_(
-                    UserWord.user_id == user_id,
-                    UserWord.word_id == word_id
-                )
-            )
+            # Check if the word is already added for the user
+            query = select(UserWord).where(and_(UserWord.user_id == user_id, UserWord.word_id == word_id))
             existing = await session.execute(query)
             
             if existing.scalar_one_or_none():
-                return {"error": "Word already added"}
+                return {"message": "word already added", "word": (await session.get(Word, word_id)).word}
             
-            user_word = UserWord(user_id=user_id, word_id=word_id)
-            session.add(user_word)
-            await session.commit()
-            return user_word
+            await cls.create(user_id=user_id, word_id=word_id)
+            return {"message": "word_added", "word": (await session.get(Word, word_id)).word}
+
 
     @classmethod
     async def get_review_words(cls, user_id: int):
-        """Получить слова, готовые к повторению"""
+        """Get words that are due for review for a specific user"""
         async with new_session() as session:
-            query = select(UserWord).where(
-                and_(
-                    UserWord.user_id == user_id,
-                    UserWord.next_review <= datetime.now()
-                )
-            )
+            query = select(UserWord).options(selectinload(UserWord.word)).where(and_(UserWord.user_id == user_id, UserWord.next_review <= datetime.now()))
             result = await session.execute(query)
             return result.scalars().all()
 
     @classmethod
-    async def update_review(cls, user_word_id: int, is_correct: bool):
-        """Обновить интервал повторения"""
+    async def update_review(cls, user_word_id: int, result: str):
+        """Update the review interval"""
         async with new_session() as session:
             user_word = await session.get(UserWord, user_word_id)
             
-            if is_correct:
+            if result == "good":
                 user_word.repetitions += 1
-                user_word.interval *= 2
-            else:
-                user_word.repetitions = 0
+                user_word.interval *= 7
+            elif result == "hard":
+                user_word.repetitions += 1
+                user_word.interval = 3
+            elif result == "again":
+                user_word.repetitions += 1
                 user_word.interval = 1
-            
-            # Вычисляем на Python следующую дату повторения
+
+            # Calculate the next review date based on the updated interval(days)
             user_word.next_review = datetime.now() + timedelta(days=user_word.interval)
             
             await session.merge(user_word)

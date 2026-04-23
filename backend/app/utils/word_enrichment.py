@@ -1,13 +1,12 @@
 import asyncio
 import json
-import os
 import re
 import subprocess
 from typing import Any, Dict, List, Optional
-
+from ..core.config import settings
 from ..schemas.Word import WordAdd
 
-DEFAULT_OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "")
+DEFAULT_OLLAMA_MODEL = settings.DEFAULT_OLLAMA_MODEL
 
 
 def _extract_json_block(text: str) -> Optional[str]:

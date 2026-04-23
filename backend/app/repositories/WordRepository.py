@@ -1,14 +1,14 @@
 from app.core.database import Word, new_session
 from .base import BaseRepository
 from sqlalchemy import select
-from ..services.word_enrichment import enrich_word_text
+from ..utils.word_enrichment import enrich_word_text
 
 class WordRepository(BaseRepository[Word]):
     model = Word
 
     @classmethod
     async def get_by_word(cls, word_text: str):
-        """Получить слово по тексту"""
+        """get word by english text"""
         async with new_session() as session:
             query = select(Word).where(Word.word == word_text)
             result = await session.execute(query)
@@ -16,12 +16,12 @@ class WordRepository(BaseRepository[Word]):
 
     @classmethod
     async def get_all_words(cls):
-        """Получить все слова"""
+        """get all words"""
         return await cls.get_all()
 
     @classmethod
     async def get_or_create(cls, word_text: str):
-        """Получить слово, если не существует — создать через локальную модель Ollama."""
+        """get word, if it doesn't exist — create it using the local Ollama model."""
         word = await cls.get_by_word(word_text)
         
         if not word:
@@ -38,10 +38,10 @@ class WordRepository(BaseRepository[Word]):
     
     @classmethod
     async def create_word(cls, word_data):
-        """Добавить новое слово в базу данных"""
-        from sqlalchemy.exc import IntegrityError
-        
-        try:
+        """get word by english text"""
+        word = await cls.get_by_word(word_data.word)
+
+        if not word:
             word = await cls.create(
                 word=word_data.word,
                 level=word_data.level,
@@ -49,10 +49,5 @@ class WordRepository(BaseRepository[Word]):
                 example=word_data.example,
                 translation=word_data.translation
             )
-            return word.id
-        except IntegrityError:
-            # Слово уже существует - возвращаем его ID
-            existing = await cls.get_by_word(word_data.word)
-            if existing:
-                return existing.id
-            raise
+            
+        return word
