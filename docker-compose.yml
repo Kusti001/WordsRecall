@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: words_api
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./words.db
+    volumes:
+      - ./backend/words.db:/app/words.db
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  bot:
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    container_name: words_bot
+    env_file:
+      - ./bot/.env
+    environment:
+      - BASE_URL=http://api:8000
+    depends_on:
+      - api
+    restart: unless-stopped

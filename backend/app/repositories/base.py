@@ -1,6 +1,6 @@
 
 from sqlalchemy import select
-from app.core.database import new_session
+from app.db.session import new_session
 from typing import TypeVar, Generic, Type
 
 T = TypeVar('T')  # Generic type for models

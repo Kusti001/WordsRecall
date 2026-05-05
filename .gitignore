@@ -2,6 +2,7 @@
 node_modules/
 package-lock.json
 yarn.lock
+.alembic/
 
 # Environment variables
 .env
@@ -35,3 +36,4 @@ tmp/
 __pycache__/
 *.pyc
 *.db
+backend/alembic.ini
