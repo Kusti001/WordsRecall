@@ -6,7 +6,7 @@ from .base import BaseRepository
 from sqlalchemy import delete, select, and_, func
 from sqlalchemy.orm import selectinload
 from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import logging
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class UserWordRepository(BaseRepository[UserWord]):
 
     @classmethod
     async def add_word_to_user(cls, user_id: int, word_id: int):
-        """Add a word to the user's list of words. Returns word details."""
+        """Add a word to the user's list of words. Returns dict with status and word details."""
         try:
             async with new_session() as session:
                 # Check if the word is already added for the user
@@ -24,11 +24,23 @@ class UserWordRepository(BaseRepository[UserWord]):
                 existing = await session.execute(query)
                 
                 if existing.scalar_one_or_none():
+                    # Word already exists - get word details
                     word = await session.get(Word, word_id)
-                    raise ValueError(f"Word {word.word} already added for user {user_id}")
+                    return {
+                        "status": "already_exists",
+                        "word": word.word,
+                        "translation": word.translation,
+                        "meaning": word.meaning,
+                        "example": word.example,
+                        "level": word.level
+                    }
                 
-                # Create new UserWord record
-                user_word = cls.model(user_id=user_id, word_id=word_id)
+                # Create new UserWord record with explicit next_review
+                user_word = cls.model(
+                    user_id=user_id, 
+                    word_id=word_id,
+                    next_review=datetime.now(timezone.utc)
+                )
                 session.add(user_word)
                 await session.flush()
                 
@@ -37,7 +49,15 @@ class UserWordRepository(BaseRepository[UserWord]):
                 await session.commit()
                 
                 logger.info(f"Word {word.word} added to user {user_id}")
-                return user_word
+                return {
+                    "status": "added",
+                    "user_word_id": user_word.id,
+                    "word": word.word,
+                    "translation": word.translation,
+                    "meaning": word.meaning,
+                    "example": word.example,
+                    "level": word.level
+                }
             
         except SQLAlchemyError as e:
             logger.error(f"Database error adding word to user: {e}")
@@ -53,7 +73,7 @@ class UserWordRepository(BaseRepository[UserWord]):
         try:
             async with new_session() as session:
                 query = select(UserWord).options(selectinload(UserWord.word)).where(
-                    and_(UserWord.user_id == user_id, UserWord.next_review <= datetime.now())
+                    and_(UserWord.user_id == user_id, UserWord.next_review <= datetime.now(timezone.utc))
                 )
                 result = await session.execute(query)
                 return result.scalars().all()
@@ -85,7 +105,7 @@ class UserWordRepository(BaseRepository[UserWord]):
                     raise ValueError(f"Invalid review result: {result}")
 
                 # Calculate next review date based on interval (days)
-                user_word.next_review = datetime.now() + timedelta(days=user_word.interval)
+                user_word.next_review = datetime.now(timezone.utc) + timedelta(days=user_word.interval)
                 
                 await session.merge(user_word)
                 await session.commit()
@@ -206,7 +226,7 @@ class UserWordRepository(BaseRepository[UserWord]):
             async with new_session() as session:
                 total_query = select(func.count(UserWord.id)).where(UserWord.user_id == user_id)
                 review_query = select(func.count(UserWord.id)).where(
-                    and_(UserWord.user_id == user_id, UserWord.next_review <= datetime.now())
+                    and_(UserWord.user_id == user_id, UserWord.next_review <= datetime.now(timezone.utc))
                 )
                 
                 total_result = await session.execute(total_query)

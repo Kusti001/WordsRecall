@@ -1,4 +1,4 @@
 from pydantic import BaseModel
 
-class AddWordRequest(BaseModel):
-    id: str
+class AddOrDeleteWordRequest(BaseModel):
+    word_id: int

@@ -5,15 +5,15 @@ from states import FeedbackState, ReviewStates, ReportStates
 from aiogram import Router, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery
-from api import add_word, get_stats, get_dictionary, get_new_words, is_valid_word, register_user, get_review, get_word, escape_md, send_review 
+from api import add_word, get_stats, get_dictionary, is_valid_word, register_user, get_review, get_word, escape_md, send_review 
 from keyboards import review_keyboard, add_keyboard, main_keyboard
 from config import settings
 from messages import (
-    REVIEW_NEW_WORDS, START_NEW_USER, START_RETURNING_USER, DICTIONARY_EMPTY, DICTIONARY_HEADER, DICTIONARY_ITEM,
+    REVIEW_START, START_NEW_USER, START_RETURNING_USER, DICTIONARY_EMPTY, DICTIONARY_HEADER, DICTIONARY_ITEM,
     WORD_INVALID, WORD_FOUND_TEMPLATE, WORD_ADDED, WORD_ALREADY_EXISTS,
     REVIEW_NO_WORDS, REVIEW_WORD_TEMPLATE, REVIEW_COMPLETE,
     FEEDBACK_PROMPT, FEEDBACK_CONFIRMATION, FEEDBACK_ADMIN,
-    STATS_COMING_SOON, REPORT_COMING_SOON, CANCELLED,
+    COMING_SOON, CANCELLED,
     ERROR_DICT_FETCH, ERROR_WORDS_FETCH, ERROR_WORD_SEARCH, ERROR_WORD_ADD,
     ERROR_REVIEW_PROCESS, ERROR_REVIEW_INVALID, ERROR_FEEDBACK, ERROR_GENERAL,
     get_api_error_message
@@ -46,21 +46,17 @@ async def start(message: Message):
 
 @router.message(Command("dictionary"))
 @router.message(F.text == "📚 Словарь")
-async def get_dictionary_words(message: Message, state: FSMContext):
+async def get_dictionary_words(message: Message):
     """Get user's complete dictionary"""
     try:
         res = await get_dictionary(str(message.from_user.id))
         
-        if res.get("error"):
-            await message.answer(get_api_error_message(res))
-            return
-        
-        if res.get("total") == 0:
+        if res["total"] == 0:
             await message.answer(DICTIONARY_EMPTY)
             return
         
         text = DICTIONARY_HEADER
-        for i, word in enumerate(res.get("words", [])):
+        for i, word in enumerate(res["items"]):
             text += DICTIONARY_ITEM.format(
                 i=i+1,
                 word=escape_md(word['word']),
@@ -84,7 +80,7 @@ async def stats(message: Message):
             await message.answer(get_api_error_message(res))
             return
         
-        await message.answer(f"Статистика:\n\nСлов в словаре: {res['total_words']}\nСлов на повторение: {res['review_words']}")
+        await message.answer(f"Статистика:\n\nСлов в словаре: {res['data']['total_words']}\nСлов на повторение: {res['data']['review_words']}")
 
     except Exception as e:
         logger.error(f"Error in stats handler: {e}")
@@ -129,17 +125,22 @@ async def feedback_message(message: Message, state: FSMContext):
 async def confirm_add_word(callback: CallbackQuery):
     """Add word to user's dictionary"""
     try:
-        word_id = callback.data.split(":")[1]
+        parts = callback.data.split(":")
+        word_id = parts[1]
+        word_text = parts[2] if len(parts) > 2 else data.get("word", str(word_id))
         
         res = await add_word(str(callback.from_user.id), word_id)
-        
+        data = res.get("data", {})
         if res.get("error"):
             await callback.message.answer(get_api_error_message(res))
         elif res.get("message") == "word_added":
-            await callback.message.answer(WORD_ADDED.format(word=escape_md(res['word'])), parse_mode="MarkdownV2")
-            logger.info(f"Word {res['word']} added for user {callback.from_user.id}")
+            await callback.message.answer(WORD_ADDED.format(word=escape_md(word_text)), parse_mode="MarkdownV2")
+            logger.info(f"Word {word_text} added for user {callback.from_user.id}")
+        elif res.get("message") == "word_already_exists":
+            await callback.message.answer(WORD_ALREADY_EXISTS.format(word=escape_md(word_text)), parse_mode="MarkdownV2")
+            logger.info(f"Word {word_text} already exists for user {callback.from_user.id}")
         else:
-            await callback.message.answer(WORD_ALREADY_EXISTS.format(word=escape_md(res.get('word', 'N/A'))), parse_mode="MarkdownV2")
+            await callback.message.answer(WORD_ALREADY_EXISTS.format(word=escape_md(word_text)), parse_mode="MarkdownV2")
         
         await callback.answer()
     except Exception as e:
@@ -157,25 +158,13 @@ async def get_review_words(message: Message, state: FSMContext):
         if res.get("error"):
             await message.answer(get_api_error_message(res))
             return
-        
-        if res.get("total") == 0:
-            res = await get_new_words(str(message.from_user.id))
-
-            if res.get("error"):
-                await message.answer(get_api_error_message(res))
-                return
             
-            if res.get("total") == 0:
-                await message.answer(REVIEW_NO_WORDS)
-                return
-            
-            await message.answer(REVIEW_NEW_WORDS)
-
-        words = res.get("words", [])
-        
-        if not words:
+        if res.get("total", 0) == 0:
             await message.answer(REVIEW_NO_WORDS)
             return
+        
+        message.answer(REVIEW_START)
+        words = res.get("items", [])
         
         # Save words list and current index in state
         await state.update_data(
@@ -185,8 +174,8 @@ async def get_review_words(message: Message, state: FSMContext):
         await state.set_state(ReviewStates.reviewing)
         
         # Send first word
-        if res.get("words"):
-            await send_word(message, res["words"][0])
+        if words:
+            await send_word(message, words[0])
             logger.info(f"Started review session for user {message.from_user.id}")
 
     except Exception as e:
@@ -339,21 +328,22 @@ async def search_word(message: Message):
             await message.answer(WORD_INVALID)
             return
         
-        word_data = await get_word(message.text.strip())
+        res = await get_word(message.text.strip())
         
-        if word_data.get("error"):
-            await message.answer(get_api_error_message(word_data))
+        if res.get("error"):
+            await message.answer(get_api_error_message(res))
             return
         
+        data = res.get("data")
         text = WORD_FOUND_TEMPLATE.format(
-            word=escape_md(word_data['word']),
-            level=word_data.get('level', 'N/A'),
-            meaning=escape_md(word_data['meaning']),
-            example=escape_md(word_data['example']),
-            translation=escape_md(word_data['translation'])
+            word=escape_md(data['word']),
+            level=escape_md(data['level']),
+            meaning=escape_md(data['meaning']),
+            example=escape_md(data['example']),
+            translation=escape_md(data['translation'])
         )
         
-        await message.answer(text, parse_mode="MarkdownV2", reply_markup=add_keyboard(word_data['id']))
+        await message.answer(text, parse_mode="MarkdownV2", reply_markup=add_keyboard(data['id'], data['word']))
         logger.info(f"User {message.from_user.id} searched word: {message.text.strip()}")
     except Exception as e:
         logger.error(f"Error in search_word: {e}")

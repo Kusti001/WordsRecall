@@ -55,19 +55,15 @@ async def get_word(word: str):
 
 async def add_word(telegram_id: str, word_id: str):
     """Add word to user's dictionary"""
-    return await _api_request("POST", f"/reviews/{telegram_id}/words", {"id": word_id})
+    return await _api_request("POST", f"/users/{telegram_id}/words", {"word_id": word_id})
 
 async def send_review(telegram_id: str, user_word_id: str, result: str):
     """Record word review result"""
-    return await _api_request("POST", f"/users/{telegram_id}/words/{user_word_id}/review", {"result": result})
+    return await _api_request("POST", f"/reviews/{telegram_id}/{user_word_id}", {"result": result})
 
 async def get_dictionary(telegram_id: str):
     """Get user's complete dictionary"""
-    return await _api_request("GET", f"/users/{telegram_id}/words/dictionary")
-
-async def get_new_words(telegram_id: str):
-    """Get new words for the user"""
-    return await _api_request("GET", f"/users/{telegram_id}/words/new")
+    return await _api_request("GET", f"/users/{telegram_id}/words")
 
 async def get_stats(telegram_id: str):
     """Get user statistics"""

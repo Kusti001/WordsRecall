@@ -44,7 +44,7 @@ DICTIONARY_ITEM = "{i}\\) *{word}* \\- {translation} следующее повт
 
 # ============ WORD SEARCH MESSAGES ============
 
-WORD_INVALID = "Пожалуйста, отправь корректное слово (только буквы, не слишком длинное)."
+WORD_INVALID = "Пожалуйста, отправь корректное слово (АНГЛИЙСКИЙ ЯЗЫК, только буквы, не слишком длинное)."
 WORD_FOUND_TEMPLATE = (
     "📖 *{word}* `{level}`\n\n"
     "📚 *Definition:*\n_{meaning}_\n\n"
@@ -56,6 +56,7 @@ WORD_FOUND_TEMPLATE = (
 
 WORD_ADDED = "✅ Слово *{word}* добавлено в словарь"
 WORD_ALREADY_EXISTS = "⚠️ Слово *{word}* уже в словаре"
+REVIEW_START = "🔁 Начинаем повторение! Вот первое слово для повторения 👇"
 REVIEW_NO_WORDS = "Слова для повторения не найдены. Добавь новые слова, отправив их мне в сообщении."
 REVIEW_NEW_WORDS = "Нет слов для повторения — вот новые слова для изучения 👇"
 
@@ -84,8 +85,7 @@ FEEDBACK_ADMIN = "📩 Обратная связь\n\nОт: @{username} ({user_i
 
 # ============ FEATURE MESSAGES ============
 
-STATS_COMING_SOON = "Функция в разработке! 👨‍💻"
-REPORT_COMING_SOON = "Функция в разработке! 👨‍💻"
+COMING_SOON = "Функция в разработке! 👨‍💻"
 
 # ============ CONFIRMATION MESSAGES ============
 

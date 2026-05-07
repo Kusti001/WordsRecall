@@ -1,5 +1,4 @@
 from datetime import date
-
 from app.db.session import new_session
 from app.models.user import User
 from .base import BaseRepository
@@ -22,16 +21,17 @@ class UserRepository(BaseRepository[User]):
                 return result.scalar_one_or_none()
         except SQLAlchemyError as e:
             logger.error(f"Database error getting user by telegram_id: {e}")
-            raise DatabaseError(f"Failed to get user: {str(e)}")
+            raise
 
     @classmethod
     async def create_user(cls, telegram_id: str):
         """Create a new user"""
         try:
             return await cls.create(telegram_id=telegram_id)
+
         except SQLAlchemyError as e:
             logger.error(f"Database error creating user: {e}")
-            raise DatabaseError(f"Failed to create user: {str(e)}")
+            raise
         
     @classmethod
     async def can_add_new_words(cls, user_id: int) -> dict:
@@ -66,4 +66,4 @@ class UserRepository(BaseRepository[User]):
 
         except Exception as e:
             logger.error(f"Error checking new words limit: {e}")
-            raise DatabaseError(f"Failed to check new words limit: {str(e)}")
+            raise
